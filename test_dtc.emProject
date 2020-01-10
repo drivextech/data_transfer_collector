@@ -37,7 +37,6 @@
     <folder Name="nRF_Libraries">
       <file file_name="../../../components/libraries/button/app_button.c" />
       <file file_name="../../../components/libraries/util/app_error.c" />
-      <file file_name="../../../components/libraries/util/app_error_handler_gcc.c" />
       <file file_name="../../../components/libraries/util/app_error_weak.c" />
       <file file_name="../../../components/libraries/fifo/app_fifo.c" />
       <file file_name="../../../components/libraries/scheduler/app_scheduler.c" />
@@ -105,6 +104,16 @@
       <file file_name="serial_num.c" />
       <file file_name="packet_buf.h" />
       <file file_name="packet_buf.c" />
+      <file file_name="packet_queue.h" />
+      <file file_name="packet_queue.c" />
+      <file file_name="usb_ser.h" />
+      <file file_name="usb_ser.c" />
+      <file file_name="usb_ser_cacher.h" />
+      <file file_name="usb_ser_cacher.c" />
+      <file file_name="bt_collector.h" />
+      <file file_name="bt_collector.c" />
+      <file file_name="bt_collector_cacher.h" />
+      <file file_name="bt_collector_cacher.c" />
     </folder>
     <folder Name="nRF_BLE">
       <file file_name="../../../components/ble/common/ble_advdata.c" />

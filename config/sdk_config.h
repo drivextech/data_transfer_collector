@@ -6305,8 +6305,8 @@
 // <i> Vendor ID ordered from USB IF: http://www.usb.org/developers/vendor/
 
 #ifndef APP_USBD_VID
-//#define APP_USBD_VID 0x8888
-#define APP_USBD_VID 0x1915
+#define APP_USBD_VID 0x8888
+//#define APP_USBD_VID 0x1915
 #endif
 
 // <o> APP_USBD_PID - Product ID.  <0x0000-0xFFFF> 
@@ -6316,8 +6316,8 @@
 // <i> Selected Product ID
 
 #ifndef APP_USBD_PID
-//#define APP_USBD_PID 0x8888
-#define APP_USBD_PID 0x520F
+#define APP_USBD_PID 0x8888
+//#define APP_USBD_PID 0x520F
 #endif
 
 // <o> APP_USBD_DEVICE_VER_MAJOR - Device version, major part.  <0-99> 
@@ -6369,7 +6369,7 @@
 // <i> Functions that modify USBD state are functions for sleep, wakeup, start, stop, enable, and disable.
 //==========================================================
 #ifndef APP_USBD_CONFIG_EVENT_QUEUE_ENABLE
-#define APP_USBD_CONFIG_EVENT_QUEUE_ENABLE 1
+#define APP_USBD_CONFIG_EVENT_QUEUE_ENABLE 0
 #endif
 // <o> APP_USBD_CONFIG_EVENT_QUEUE_SIZE - The size of the event queue.  <16-64> 
 
