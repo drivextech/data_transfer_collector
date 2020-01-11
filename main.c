@@ -251,9 +251,10 @@ void power_mgmt_init()
 }
 
 
-APP_TIMER_DEF(m_app_timer_id);
+APP_TIMER_DEF(m_app_timer_debug);
+APP_TIMER_DEF(m_app_timer_maintainer);
 
-void timeout_cb(void* p_context)
+void timer_debug_cb(void* p_context)
 {
     static int cached_peer_num = -8;
 
@@ -264,28 +265,33 @@ void timeout_cb(void* p_context)
         LEDS_OFF(HOST_USB_LED_MASK);
     }
 
-    LEDS_INVERT(PEER_NUM_LED_MASK);
-    app_sched_event_put(NULL, 0, usb_data_scheduler_handler);
-//    if(g_bt_stat.peer_num == cached_peer_num) {
-//        if(cached_peer_num != 0) {
-//            LEDS_INVERT(PEER_NUM_LED_MASK);
-//        }
-//        return;
-//    }
-//
-//    if(g_bt_stat.peer_num == 0) {
-//        LEDS_ON(PEER_NUM_LED_MASK);
-//    } else {
-//        app_timer_stop(m_app_timer_id);
-//        if(g_bt_stat.peer_num > 0 && g_bt_stat.peer_num <= 8) {
-//            app_timer_start(m_app_timer_id, APP_TIMER_TICKS(1000 * g_bt_stat.peer_num), NULL);
-//        } else {
-//            app_timer_start(m_app_timer_id, APP_TIMER_TICKS(1000 / 8), NULL);
-//        }
-//    }
-//
-//    cached_peer_num = g_bt_stat.peer_num;
+    int peer_num = get_connected_peer_num();
+
+    if(peer_num == cached_peer_num) {
+        if(cached_peer_num != 0) {
+            LEDS_INVERT(PEER_NUM_LED_MASK);
+        }
+        return;
+    }
+
+    if(peer_num == 0) {
+        LEDS_ON(PEER_NUM_LED_MASK);
+    } else {
+        app_timer_stop(m_app_timer_debug);
+        if(peer_num > 0 && peer_num <= 8) {
+            app_timer_start(m_app_timer_debug, APP_TIMER_TICKS(1000 * peer_num), NULL);
+        } else {
+            app_timer_start(m_app_timer_debug, APP_TIMER_TICKS(1000 / 8), NULL);
+        }
+    }
+
+    cached_peer_num = peer_num;
 }
+void timer_maintainer_cb(void* p_context)
+{
+    app_sched_event_put(NULL, 0, usb_data_scheduler_handler);
+}
+
 
 /** @brief Function for initializing the timer.
  */
@@ -300,9 +306,14 @@ void timer_init()
     err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
 
-    // Create timers.
-    err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_REPEATED, timeout_cb);
-    // err_code = app_timer_create(&m_app_timer_id, APP_TIMER_MODE_SINGLE_SHOT, timeout_cb);
+    // Create debug timer.
+    err_code = app_timer_create(&m_app_timer_debug, APP_TIMER_MODE_REPEATED, timer_debug_cb);
+    // err_code = app_timer_create(&m_app_timer_debug, APP_TIMER_MODE_SINGLE_SHOT, timer_debug_cb);
+    APP_ERROR_CHECK(err_code);
+
+    // Create maintainer timer.
+    err_code = app_timer_create(&m_app_timer_maintainer, APP_TIMER_MODE_REPEATED, timer_maintainer_cb);
+    // err_code = app_timer_create(&m_app_timer_maintainer, APP_TIMER_MODE_SINGLE_SHOT, timer_maintainer_cb);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -310,9 +321,13 @@ void timer_start()
 {
     SEND_LOG("(%s): start...\r\n", __func__);
     ret_code_t err_code;
-    //err_code = app_timer_start(m_app_timer_id, APP_TIMER_TICKS(100), NULL);
-    err_code = app_timer_start(m_app_timer_id, APP_TIMER_TICKS(1000), NULL);
-    //err_code = app_timer_start(m_app_timer_id, APP_TIMER_TICKS(10000), NULL);
+
+    //err_code = app_timer_start(m_app_timer_debug, APP_TIMER_TICKS(100), NULL);
+    err_code = app_timer_start(m_app_timer_debug, APP_TIMER_TICKS(1000), NULL);
+    //err_code = app_timer_start(m_app_timer_debug, APP_TIMER_TICKS(10000), NULL);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_start(m_app_timer_maintainer, APP_TIMER_TICKS(180), NULL);
     APP_ERROR_CHECK(err_code);
 }
 

@@ -592,3 +592,9 @@ bool send_bt_data(const bt_addr_t* bt_addr, const BYTE* data, WORD data_len)
 
     return false;
 }
+
+
+int get_connected_peer_num()
+{
+    return g_bt_stat.peer_num;
+}

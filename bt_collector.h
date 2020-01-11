@@ -33,5 +33,7 @@ extern void on_ble_data_sent(const bt_addr_t* peer_addr);
 
 bool send_bt_data(const bt_addr_t* bt_addr, const BYTE* data, WORD data_len);
 
+int get_connected_peer_num();
+
 
 #endif
