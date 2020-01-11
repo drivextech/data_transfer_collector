@@ -7361,7 +7361,7 @@
 // <e> TASK_MANAGER_ENABLED - task_manager - Task manager.
 //==========================================================
 #ifndef TASK_MANAGER_ENABLED
-#define TASK_MANAGER_ENABLED 0
+#define TASK_MANAGER_ENABLED 1
 #endif
 // <q> TASK_MANAGER_CLI_CMDS  - Enable CLI commands specific to the module
  
