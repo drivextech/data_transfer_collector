@@ -18,7 +18,6 @@
 #include "nrf_drv_power.h"
 #include "nrf_drv_clock.h"
 #include "nrf_pwr_mgmt.h"
-#include "ble_nus_c.h"
 #include "bsp_btn_ble.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -26,6 +25,7 @@
 #include "bt_collector.h"
 #include "util.h"
 #include "usb_ser_cacher.h"
+#include "dts/ble_data_transfer_service_client.h"
 
 
 #define APP_BLE_CONN_CFG_TAG      1                                     /**< Tag that refers to the BLE stack configuration that is set with @ref sd_ble_cfg_set. The default tag is @ref APP_BLE_CONN_CFG_TAG. */
@@ -54,11 +54,6 @@
 static const char m_target_periph_name[] = "NordicDTS";             /**< Name of the device to try to connect to. This name is searched for in the scanning report data. */
 
 
-#define NUS_SERVICE_UUID_TYPE   BLE_UUID_TYPE_VENDOR_BEGIN              /**< UUID type for the Nordic UART Service (vendor specific). */
-
-static const ble_uuid_t m_nus_uuid = {BLE_UUID_NUS_SERVICE, NUS_SERVICE_UUID_TYPE};
-
-
 
 typedef struct _bt_stat_t {
     int peer_num;
@@ -71,7 +66,7 @@ static volatile bt_stat_t g_bt_stat;
 
 
 NRF_BLE_GATT_DEF(m_gatt);                                               /**< GATT module instance. */
-BLE_NUS_C_ARRAY_DEF(m_dts, NRF_SDH_BLE_CENTRAL_LINK_COUNT);
+BLE_DTS_CLIENTS_DEF(m_dts, NRF_SDH_BLE_CENTRAL_LINK_COUNT);
 BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, NRF_SDH_BLE_CENTRAL_LINK_COUNT);  /**< Database discovery module instances. */
 NRF_BLE_SCAN_DEF(m_scan);                                               /**< Scanning Module instance. */
 
@@ -107,7 +102,7 @@ static void scan_evt_handler(const scan_evt_t* p_scan_evt)
 
          case NRF_BLE_SCAN_EVT_CONNECTED:
              do {
-                  ble_gap_evt_connected_t const * p_connected =
+                  const ble_gap_evt_connected_t* p_connected =
                                    p_scan_evt->params.connected.p_connected;
                  // Scan is automatically stopped by the connection.
                  SEND_LOG("(%s): Connecting to target %02x%02x%02x%02x%02x%02x\r\n",
@@ -189,49 +184,15 @@ void scan_init()
     err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_NAME_FILTER, false);
     APP_ERROR_CHECK(err_code);
 
-//    err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_UUID_FILTER, &m_nus_uuid);
+    //ble_uuid_t dts_uuid = {BLE_UUID_DTS_SERVICE, BLE_UUID_TYPE_UNKNOWN};
+//    ble_uuid_t dts_uuid = {BLE_UUID_DTS_SERVICE, BLE_UUID_TYPE_VENDOR_BEGIN};
+//    err_code = nrf_ble_scan_filter_set(&m_scan, SCAN_UUID_FILTER, &dts_uuid);
 //    APP_ERROR_CHECK(err_code);
 //    err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_UUID_FILTER, false);
 //    APP_ERROR_CHECK(err_code);
-}
 
-
-static void ble_nus_c_evt_handler(ble_nus_c_t* p_ble_nus_c, const ble_nus_c_evt_t* p_ble_nus_evt)
-{
-    ret_code_t err_code;
-
-    switch (p_ble_nus_evt->evt_type)
-    {
-        case BLE_NUS_C_EVT_DISCOVERY_COMPLETE:
-            SEND_LOG("(%s): DTS discovered on conn_handle 0x%x\r\n", __func__, p_ble_nus_evt->conn_handle);
-
-            g_bt_stat.peer_num++;
-
-            err_code = ble_nus_c_handles_assign(p_ble_nus_c, p_ble_nus_evt->conn_handle, &p_ble_nus_evt->handles);
-            APP_ERROR_CHECK(err_code);
-
-            err_code = ble_nus_c_tx_notif_enable(p_ble_nus_c);
-            APP_ERROR_CHECK(err_code);
-            break;
-
-        case BLE_NUS_C_EVT_NUS_TX_EVT:
-            do {
-                // SEND_LOG("(%s): conn(0x%x) Received data: %d B\r\n", __func__, p_ble_nus_c->conn_handle, p_ble_nus_evt->data_len);
-
-                if(p_ble_nus_c->conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
-                    // assert `g_handle_peeraddr_table[p_ble_nus_c->conn_handle]` Not Invalid!
-                    on_ble_data_received(&g_handle_peeraddr_table[p_ble_nus_c->conn_handle], p_ble_nus_evt->p_data, p_ble_nus_evt->data_len);
-                }
-            } while(0);
-            break;
-
-        case BLE_NUS_C_EVT_DISCONNECTED:
-            SEND_LOG("(%s): Disconnected.\r\n", __func__);
-
-            g_bt_stat.peer_num--;
-
-            break;
-    }
+//    err_code = nrf_ble_scan_filters_enable(&m_scan, NRF_BLE_SCAN_ALL_FILTER, false);
+//    APP_ERROR_CHECK(err_code);
 }
 
 
@@ -287,11 +248,6 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                 err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
                 APP_ERROR_CHECK(err_code);
 
-                err_code = ble_nus_c_handles_assign(&m_dts[conn_handle],
-                                                    conn_handle,
-                                                    NULL);
-                APP_ERROR_CHECK(err_code);
-
                 err_code = ble_db_discovery_start(&m_db_disc[conn_handle],
                                                   conn_handle);
                 if(err_code != NRF_ERROR_BUSY) {
@@ -303,9 +259,6 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                     SEND_LOG("(%s): Connected: continue scan!\r\n", __func__);
                     scan_start();
                 }
-
-                //g_handle_peeraddr_table[conn_handle] = p_gap_evt->params.connected.peer_addr;
-                fast_copy(g_handle_peeraddr_table[conn_handle].addr1s, p_gap_evt->params.connected.peer_addr.addr, sizeof(g_handle_peeraddr_table[conn_handle].addr1s));
             } while(0);
             break;
 
@@ -319,8 +272,6 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                             __func__,
                             conn_handle,
                             p_gap_evt->params.disconnected.reason);
-
-                memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
 
                 // Start scanning.
 //                scan_start();
@@ -387,6 +338,7 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                 err_code = sd_ble_gap_conn_param_update(p_ble_evt->evt.gap_evt.conn_handle, &params);
                 APP_ERROR_CHECK(err_code);
             } while(0);
+
         case BLE_GAP_EVT_CONN_PARAM_UPDATE:
             do {
                 ble_gap_conn_params_t params = p_ble_evt->evt.gap_evt.params.conn_param_update.conn_params;
@@ -457,17 +409,68 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
 }
 
 
+static void on_service_ready_cber(const ble_dts_t* dts_inst)
+{
+    ret_code_t err_code;
+
+    err_code = ble_dts_client_cccd_configure(dts_inst, true);
+    APP_ERROR_CHECK_BOOL(err_code);
+
+    uint16_t conn_handle = dts_inst->conn_handle;
+    fast_copy(&g_handle_peeraddr_table[conn_handle], &dts_inst->peer_addr, sizeof(g_handle_peeraddr_table[conn_handle]));
+
+    g_bt_stat.peer_num++;
+
+    SEND_LOG("(%s): DTS discovered on conn_handle(0x%x)\r\n", __func__, conn_handle);
+}
+
+static void on_service_unready_cber(const ble_dts_t* dts_inst)
+{
+    uint16_t conn_handle = dts_inst->conn_handle;
+    memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
+
+    g_bt_stat.peer_num--;
+    
+    SEND_LOG("(%s): Disconnected.\r\n", __func__);
+}
+
+static void on_data_sent_cber(const ble_dts_t* dts_inst)
+{
+    uint16_t conn_handle = dts_inst->conn_handle;
+
+    // SEND_LOG("(%s): conn(0x%x) data sent\r\n", __func__, conn_handle);
+
+    // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
+    if(conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+        // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
+        on_ble_data_sent(&g_handle_peeraddr_table[conn_handle]);
+    }
+}
+
+static void on_data_received_cber(const ble_dts_t* dts_inst, const BYTE* data, WORD data_len)
+{
+    uint16_t conn_handle = dts_inst->conn_handle;
+
+    // SEND_LOG("(%s): conn(0x%x) data received: %u B\r\n", __func__, conn_handle, data_len);
+
+    if(conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+        // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
+        on_ble_data_received(&g_handle_peeraddr_table[conn_handle], data, data_len);
+    }
+}
+
 void dts_init()
 {
-    ret_code_t       err_code;
-    ble_nus_c_init_t init;
-
-    init.evt_handler = ble_nus_c_evt_handler;
-
-    for (uint32_t i = 0; i < NRF_SDH_BLE_CENTRAL_LINK_COUNT; i++)
-    {
-        err_code = ble_nus_c_init(&m_dts[i], &init);
-        APP_ERROR_CHECK(err_code);
+    ble_dts_cbers dts_cbers;
+    memset(&dts_cbers, 0, sizeof(dts_cbers));
+    dts_cbers.service_ready_cber = on_service_ready_cber;
+    dts_cbers.service_unready_cber = on_service_unready_cber;
+    dts_cbers.data_sent_cber = on_data_sent_cber;
+    dts_cbers.data_received_cber = on_data_received_cber;
+    for(int i = 0; i < (int)NRF_SDH_BLE_CENTRAL_LINK_COUNT; i++) {
+        bool ret = ble_dts_client_init(&m_dts[i]);
+        APP_ERROR_CHECK_BOOL(ret);
+        m_dts[i].dts_cbers = dts_cbers;
     }
 }
 
@@ -508,10 +511,10 @@ void ble_stack_init()
  */
 static void db_disc_handler(ble_db_discovery_evt_t* p_evt)
 {
-    SEND_LOG("(%s): call to ble_lbs_on_db_disc_evt for conn_handle 0x%x!\r\n",
+    SEND_LOG("(%s): call to ble_dts_client_on_db_disc_evt for conn_handle 0x%x!\r\n",
                 __func__, p_evt->conn_handle);
 
-    ble_nus_c_on_db_disc_evt(&m_dts[p_evt->conn_handle], p_evt);
+    ble_dts_client_on_db_disc_evt(&m_dts[p_evt->conn_handle], p_evt);
 }
 
 /** @brief Database discovery initialization.
@@ -568,7 +571,6 @@ void gatt_init()
     err_code = sd_ble_opt_set(BLE_COMMON_OPT_CONN_EVT_EXT, &opt);
     APP_ERROR_CHECK(err_code);
 }
-
 
 
 bool bt_collector_init()

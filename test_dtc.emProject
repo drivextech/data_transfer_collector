@@ -114,6 +114,9 @@
       <file file_name="bt_collector.c" />
       <file file_name="bt_collector_cacher.h" />
       <file file_name="bt_collector_cacher.c" />
+      <file file_name="dts/ble_data_transfer_service_def.h" />
+      <file file_name="dts/ble_data_transfer_service_client.h" />
+      <file file_name="dts/ble_data_transfer_service_client.c" />
     </folder>
     <folder Name="nRF_BLE">
       <file file_name="../../../components/ble/common/ble_advdata.c" />

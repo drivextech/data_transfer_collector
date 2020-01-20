@@ -1,13 +1,9 @@
 #ifndef _BT_COLLECTOR_H_
 #define _BT_COLLECTOR_H_
 
-#include "types.h"
 #include "ble.h"
-
-
-typedef struct _bt_addr_t {
-    BYTE addr1s[BLE_GAP_ADDR_LEN];
-} bt_addr_t;
+#include "types.h"
+#include "dts/ble_data_transfer_service_def.h"
 
 
 void scan_init();
