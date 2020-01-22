@@ -19,8 +19,7 @@ typedef struct {                                                                
 #define BUF_ELEM_LEN(ELEM_OBJ) ((ELEM_OBJ).elem_len)
 #define BUF_ELEM_ALLOC(ELEM_POOL_NAME, ELEM_LEN, ELEM_OBJ) do {                     \
     (ELEM_OBJ).elem_data = nrf_balloc_alloc(&ELEM_POOL_NAME);                       \
-    assert((ELEM_OBJ).elem_data != NULL);                                           \
-    (ELEM_OBJ).elem_len = ELEM_LEN;                                                 \
+    (ELEM_OBJ).elem_len = (ELEM_OBJ).elem_data ? ELEM_LEN : 0;                      \
 } while(0)
 #define BUF_ELEM_FREE(ELEM_POOL_NAME, ELEM_OBJ) do {                                \
     if((ELEM_OBJ).elem_data) {                                                      \
