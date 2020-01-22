@@ -95,7 +95,7 @@ void scheduler_handler()
 
 void usb_data_scheduler_handler(void *p_event_data, uint16_t event_size)
 {
-    if(p_event_data != NULL && event_size > 0) {
+    if(event_size > 0) { // p_event_data may NOT be NULL in `app_sched_event_put`'s impl!
         static BYTE recev_buf[MAX_PACKET_LEN];
 
         usb_data_t* usb_data = p_event_data;
@@ -149,7 +149,7 @@ void on_usb_data_sent(const bt_addr_t* peer_addr)
 
 void ble_data_scheduler_handler(void *p_event_data, uint16_t event_size)
 {
-    if(p_event_data != NULL && event_size > 0) {
+    if(event_size > 0) { // p_event_data may NOT be NULL in `app_sched_event_put`'s impl!
         static BYTE recev_buf[MAX_PACKET_LEN];
 
         bt_data_t* bt_data = p_event_data;
