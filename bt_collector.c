@@ -66,13 +66,31 @@ static volatile bt_stat_t g_bt_stat;
 
 
 NRF_BLE_GATT_DEF(m_gatt);                                               /**< GATT module instance. */
-BLE_DTS_CLIENTS_DEF(m_dts, NRF_SDH_BLE_CENTRAL_LINK_COUNT);
-BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, NRF_SDH_BLE_CENTRAL_LINK_COUNT);  /**< Database discovery module instances. */
+BLE_DTS_CLIENTS_DEF(m_dts_clients, MAX_PEER_NUM);
+BLE_DB_DISCOVERY_ARRAY_DEF(m_db_disc, MAX_PEER_NUM);  /**< Database discovery module instances. */
 NRF_BLE_SCAN_DEF(m_scan);                                               /**< Scanning Module instance. */
 
 
+static const bt_cbers BT_CBERS0 = (bt_cbers){NULL, NULL, NULL, NULL, NULL, NULL};
+static bt_cbers g_bt_cbers = BT_CBERS0;
 
-static bt_addr_t g_handle_peeraddr_table[NRF_SDH_BLE_CENTRAL_LINK_COUNT];
+
+
+static bt_addr_t g_handle_peeraddr_table[MAX_PEER_NUM];
+
+static bool is_btaddr_equal(const bt_addr_t* addr1, const bt_addr_t* addr2) {
+    //return memcmp(addr1, addr2, sizeof(bt_addr_t)) == 0;
+    return memcmp(addr1->addr1s, addr2->addr1s, sizeof(addr1->addr1s)) == 0;
+}
+
+static int find_btaddr(const bt_addr_t* addr) {
+    for(int ind = 0; ind < (int)MAX_PEER_NUM; ind++) {
+        if(is_btaddr_equal(addr, &g_handle_peeraddr_table[ind])) {
+            return ind;
+        }
+    }
+    return -8;
+}
 
 
 
@@ -242,7 +260,7 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
 
                 SEND_LOG("(%s): conn_handle(0x%x) established, starting DB discovery.\r\n", __func__, conn_handle);
 
-                APP_ERROR_CHECK_BOOL(conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT);
+                APP_ERROR_CHECK_BOOL(conn_handle < MAX_PEER_NUM);
 
                 ble_gap_phys_t phys = { BLE_GAP_PHY_AUTO, BLE_GAP_PHY_AUTO };
                 err_code = sd_ble_gap_phy_update(p_ble_evt->evt.gap_evt.conn_handle, &phys);
@@ -254,7 +272,7 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                     APP_ERROR_CHECK(err_code);
                 }
 
-                if(ble_conn_state_central_conn_count() >= NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+                if(ble_conn_state_central_conn_count() >= MAX_PEER_NUM) {
                 } else {
                     SEND_LOG("(%s): Connected: continue scan!\r\n", __func__);
                     scan_start();
@@ -306,7 +324,7 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                 if(p_gap_evt->params.timeout.src == BLE_GAP_TIMEOUT_SRC_CONN) {
                     SEND_LOG("(%s): Connection request timed out.\r\n", __func__);
 
-                    memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
+//                    memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
                 }
             } while(0);
             break;
@@ -359,7 +377,7 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                                                  BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
                 APP_ERROR_CHECK(err_code);
 
-                memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
+//                memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
             } while(0);
             break;
 
@@ -371,7 +389,7 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                                                  BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
                 APP_ERROR_CHECK(err_code);
 
-                memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
+//                memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
             } while(0);
             break;
 
@@ -422,16 +440,31 @@ static void on_service_ready_cber(const ble_dts_t* dts_inst)
     g_bt_stat.peer_num++;
 
     SEND_LOG("(%s): DTS discovered on conn_handle(0x%x)\r\n", __func__, conn_handle);
+
+    if(conn_handle < MAX_PEER_NUM) {
+        // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
+        if(g_bt_cbers.service_ready_cber) {
+            g_bt_cbers.service_ready_cber(&g_handle_peeraddr_table[conn_handle]);
+        }
+    }
 }
 
 static void on_service_unready_cber(const ble_dts_t* dts_inst)
 {
     uint16_t conn_handle = dts_inst->conn_handle;
-    memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
 
     g_bt_stat.peer_num--;
+
+    if(conn_handle < MAX_PEER_NUM) {
+        // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
+        if(g_bt_cbers.service_unready_cber) {
+            g_bt_cbers.service_unready_cber(&g_handle_peeraddr_table[conn_handle]);
+        }
+    }
     
-    SEND_LOG("(%s): Disconnected.\r\n", __func__);
+    SEND_LOG("(%s): Disconnected on conn_handle(0x%x)\r\n", __func__, conn_handle);
+
+    memset(&g_handle_peeraddr_table[conn_handle], 0, sizeof(g_handle_peeraddr_table[conn_handle]));
 }
 
 static void on_data_sent_cber(const ble_dts_t* dts_inst)
@@ -441,9 +474,11 @@ static void on_data_sent_cber(const ble_dts_t* dts_inst)
     // SEND_LOG("(%s): conn(0x%x) data sent\r\n", __func__, conn_handle);
 
     // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
-    if(conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+    if(conn_handle < MAX_PEER_NUM) {
         // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
-        on_ble_data_sent(&g_handle_peeraddr_table[conn_handle]);
+        if(g_bt_cbers.data_sent_cber) {
+            g_bt_cbers.data_sent_cber(&g_handle_peeraddr_table[conn_handle]);
+        }
     }
 }
 
@@ -453,9 +488,11 @@ static void on_data_received_cber(const ble_dts_t* dts_inst, const BYTE* data, W
 
     // SEND_LOG("(%s): conn(0x%x) data received: %u B\r\n", __func__, conn_handle, data_len);
 
-    if(conn_handle < NRF_SDH_BLE_CENTRAL_LINK_COUNT) {
+    if(conn_handle < MAX_PEER_NUM) {
         // assert `g_handle_peeraddr_table[conn_handle]` Not Invalid!
-        on_ble_data_received(&g_handle_peeraddr_table[conn_handle], data, data_len);
+        if(g_bt_cbers.data_received_cber) {
+            g_bt_cbers.data_received_cber(&g_handle_peeraddr_table[conn_handle], data, data_len);
+        }
     }
 }
 
@@ -467,10 +504,10 @@ void dts_init()
     dts_cbers.service_unready_cber = on_service_unready_cber;
     dts_cbers.data_sent_cber = on_data_sent_cber;
     dts_cbers.data_received_cber = on_data_received_cber;
-    for(int i = 0; i < (int)NRF_SDH_BLE_CENTRAL_LINK_COUNT; i++) {
-        bool ret = ble_dts_client_init(&m_dts[i]);
+    for(int i = 0; i < (int)MAX_PEER_NUM; i++) {
+        bool ret = ble_dts_client_init(&m_dts_clients[i]);
         APP_ERROR_CHECK_BOOL(ret);
-        m_dts[i].dts_cbers = dts_cbers;
+        m_dts_clients[i].dts_cbers = dts_cbers;
     }
 }
 
@@ -514,7 +551,7 @@ static void db_disc_handler(ble_db_discovery_evt_t* p_evt)
     SEND_LOG("(%s): call to ble_dts_client_on_db_disc_evt for conn_handle 0x%x!\r\n",
                 __func__, p_evt->conn_handle);
 
-    ble_dts_client_on_db_disc_evt(&m_dts[p_evt->conn_handle], p_evt);
+    ble_dts_client_on_db_disc_evt(&m_dts_clients[p_evt->conn_handle], p_evt);
 }
 
 /** @brief Database discovery initialization.
@@ -586,13 +623,31 @@ bool bt_collector_init()
 }
 
 
+bool bt_collector_set_cbers(const bt_cbers* bt_cbers)
+{
+    if(bt_cbers) {
+        g_bt_cbers = *bt_cbers;
+    } else {
+        g_bt_cbers = BT_CBERS0;
+    }
+    return true;
+}
+
+
 bool send_bt_data(const bt_addr_t* bt_addr, const BYTE* data, WORD data_len)
 {
     assert(bt_addr != NULL && data != NULL && data_len > 0);
 
     //TODO: multi-packet protocol implement!
 
-    return false;
+    int conn_handle = find_btaddr(bt_addr);
+    if(conn_handle < 0) {
+        return false;
+    }
+
+    DWORD err_code = ble_dts_client_send_data(&m_dts_clients[conn_handle], data, data_len);
+
+    return err_code == NRF_SUCCESS;
 }
 
 
