@@ -121,7 +121,7 @@ void on_usb_data_received(const BYTE* data, WORD data_len)
     ret_code_t err_code;
 
     usb_data_t usb_data;
-    BUF_ELEM_ALLOC(g_bt_buf, data_len, usb_data.buf_elem);
+    BUF_ELEM_ALLOC(g_usb_buf, data_len, usb_data.buf_elem);
     if(usb_data.buf_elem.elem_data == NULL) {
         SEND_LOG("(%s): BUF_ELEM_ALLOC failed!\r\n", __func__);
         return;
