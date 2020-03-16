@@ -1,3 +1,9 @@
+/**
+ * Copyright 2020 DriveX.Tech. All rights reserved.
+ * 
+ * Licensed under the License.
+ */
+
 
 #include <stdint.h>
 #include <stdio.h>
@@ -44,6 +50,10 @@ typedef struct _usb_data_t {
 } usb_data_t;
 
 
+//APP_TIMER_SCHED_EVENT_DATA_SIZE
+#define MAX_SCHED_EVENT_DATA_SIZE MAX(sizeof(bt_data_t), sizeof(usb_data_t))
+#define MAX_SCHED_QUEUE_SIZE 28
+
 
 #define MAX_PACKET_BUF_LENGTH 18
 
@@ -75,7 +85,8 @@ static struct pt pt_task_bt, pt_task_usb, pt_task_pwr_mgmt;
 void scheduler_handler()
 {
     volatile bool idle = false;
-    const int max_num_packet_cur = get_cached_bt_packet_num() + get_cached_usb_packet_num();
+    //const int max_num_packet_cur = get_cached_bt_packet_num() + get_cached_usb_packet_num();
+    const int max_num_packet_cur = 2 * get_cached_bt_packet_num() + get_cached_usb_packet_num();
     int num_packet_cur = 0;
     while(! idle && num_packet_cur < max_num_packet_cur) {
         int num_bt_packet_processed = 0, num_usb_packet_processed = 0;
@@ -87,7 +98,9 @@ void scheduler_handler()
         if(num_bt_packet_processed == 0 && num_usb_packet_processed == 0) {
             idle = true;
         }
+    }
 
+    if(app_sched_queue_space_get() == MAX_SCHED_QUEUE_SIZE) {
         task_pwr_mgmt(&pt_task_pwr_mgmt, &idle);
     }
 }
@@ -97,16 +110,33 @@ void usb_data_scheduler_handler(void *p_event_data, uint16_t event_size)
 {
     if(event_size > 0) { // p_event_data may NOT be NULL in `app_sched_event_put`'s impl!
         static BYTE recev_buf[MAX_PACKET_LEN];
+        static WORD recev_data_len;
 
         usb_data_t* usb_data = p_event_data;
 
         // SEND_LOG("(%s): usb data received: %lu B\r\n", __func__, usb_data->buf_elem.elem_len);
         // SEND_LOG("(%s)(buf: %u, %u): usb data received: %lu B\r\n", __func__,
         //         QUEUE_AVAILABLE(*g_log_packet_buf.packet_queue), QUEUE_AVAILABLE(*g_data_packet_buf.packet_queue), usb_data->buf_elem.elem_len);
-        SEND_LOG("(%s)(usb_buf: %d): usb data received: %lu B\r\n", __func__,
-                get_cached_usb_packet_num(), usb_data->buf_elem.elem_len);
+
+        tag_t tag;
+        WORD data_total_len;
+        data_total_len = tlv_parse(usb_data->buf_elem.elem_data, &tag, &recev_data_len, recev_buf);
+        assert(data_total_len == usb_data->->buf_elem.elem_len);
 
         //TODO
+        switch(tag) {
+            case TAG_CMD:
+                break;
+            case TAG_DATA:
+                do {
+                    bt_addr_t peer_addr;
+                    fast_copy(peer_addr.addr1s, recev_buf, sizeof(peer_addr.addr1s));
+                    SEND_BT_DATA(&peer_addr, recev_buf + sizeof(peer_addr.addr1s), recev_data_len - sizeof(peer_addr.addr1s));
+                } while(0);
+                break;
+            default:
+                break;
+        }
 
         BUF_ELEM_FREE(g_usb_buf, usb_data->buf_elem);
     }
@@ -155,16 +185,19 @@ void ble_data_scheduler_handler(void *p_event_data, uint16_t event_size)
         bt_data_t* bt_data = p_event_data;
 
         // SEND_LOG("(%s): ble data received: %lu B\r\n", __func__, bt_data->buf_elem.elem_len);
+        SEND_LOG("(%s): ble data received: %lu B, from: 0x%02X%02X, epoch: %u\r\n", __func__,
+                    bt_data->buf_elem.elem_len,
+                    bt_data->buf_elem.elem_data[5], bt_data->buf_elem.elem_data[6],
+                    bt_data->buf_elem.elem_data[36+5+2]); // TODO: delete
         // SEND_LOG("(%s)(bt_buf: %d, usb_buf: %d): ble data received: %lu B\r\n", __func__,
         //     get_cached_bt_packet_num(), get_cached_usb_packet_num(), bt_data->buf_elem.elem_len);
 
         fast_copy(recev_buf, bt_data->bt_addr.addr1s, sizeof(bt_data->bt_addr.addr1s));
-        // fast_copy(recev_buf + sizeof(bt_data->bt_addr.addr1s), data, data_len);
-        fast_copy(recev_buf + sizeof(bt_data->bt_addr.addr1s), bt_data->buf_elem.elem_data + 5, bt_data->buf_elem.elem_len - 5);
+        fast_copy(recev_buf + sizeof(bt_data->bt_addr.addr1s), bt_data->buf_elem.elem_data, bt_data->buf_elem.elem_len);
 
-        // SEND_USB_DATA(recev_buf, sizeof(bt_data->bt_addr.addr1s) + bt_data->buf_elem.elem_len);
-        SEND_USB_DATA(recev_buf, sizeof(bt_data->bt_addr.addr1s) - 5 + bt_data->buf_elem.elem_len);
-
+        SEND_USB_DATA(recev_buf, sizeof(bt_data->bt_addr.addr1s) + bt_data->buf_elem.elem_len);
+//        SEND_BT_DATA(&bt_data->bt_addr, bt_data->buf_elem.elem_data, bt_data->buf_elem.elem_len);
+        
         BUF_ELEM_FREE(g_bt_buf, bt_data->buf_elem);
     }
 
@@ -179,9 +212,11 @@ void on_ble_data_received(const bt_addr_t* peer_addr, const BYTE* data, WORD dat
 
     bt_data_t bt_data;
     bt_data.bt_addr = *peer_addr;
+    fast_copy(&bt_data.bt_addr, peer_addr, sizeof(bt_data.bt_addr));
     BUF_ELEM_ALLOC(g_bt_buf, data_len, bt_data.buf_elem);
     if(bt_data.buf_elem.elem_data == NULL) {
         SEND_LOG("(%s): BUF_ELEM_ALLOC failed!\r\n", __func__);
+        assert(bt_data.buf_elem.elem_data != NULL);
         return;
     }
 
@@ -190,7 +225,7 @@ void on_ble_data_received(const bt_addr_t* peer_addr, const BYTE* data, WORD dat
     err_code = app_sched_event_put(&bt_data, sizeof(bt_data), ble_data_scheduler_handler);
     if(err_code != NRF_SUCCESS) {
         BUF_ELEM_FREE(g_bt_buf, bt_data.buf_elem);
-        SEND_LOG("(%s): app_sched_event_put failed!\r\n", __func__);
+        SEND_LOG("(%s): app_sched_event_put failed, spaces available: #%u!\r\n", __func__, app_sched_queue_space_get());
     }
 }
 
@@ -200,7 +235,7 @@ void on_ble_data_sent(const bt_addr_t* peer_addr)
 
     err_code = app_sched_event_put(NULL, 0, ble_data_scheduler_handler);
     if(err_code != NRF_SUCCESS) {
-        SEND_LOG("(%s): app_sched_event_put failed!\r\n", __func__);
+        SEND_LOG("(%s): app_sched_event_put failed, spaces available: #%u!\r\n", __func__, app_sched_queue_space_get());
     }
 }
 
@@ -338,9 +373,6 @@ int main()
     ret_code_t ret;
 
     // Scheduler settings
-    //APP_TIMER_SCHED_EVENT_DATA_SIZE
-    #define MAX_SCHED_EVENT_DATA_SIZE MAX(sizeof(bt_data_t), sizeof(usb_data_t))
-    #define MAX_SCHED_QUEUE_SIZE 28
     APP_SCHED_INIT(MAX_SCHED_EVENT_DATA_SIZE, MAX_SCHED_QUEUE_SIZE);
     
     BUF_INIT(g_bt_buf);
