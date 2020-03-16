@@ -1,3 +1,9 @@
+/**
+ * Copyright 2020 DriveX.Tech. All rights reserved.
+ * 
+ * Licensed under the License.
+ */
+
 #include "usb_ser_cacher.h"
 #include "usb_ser.h"
 

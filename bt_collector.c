@@ -1,3 +1,9 @@
+/**
+ * Copyright 2020 DriveX.Tech. All rights reserved.
+ * 
+ * Licensed under the License.
+ */
+
 #include "sdk_config.h"
 #include "nordic_common.h"
 #include "nrf.h"

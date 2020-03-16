@@ -1,3 +1,7 @@
+// Copyright 2020 DriveX.Tech. All rights reserved.
+// 
+// Licensed under the License.
+
 #ifndef _BT_COLLECTOR_CACHER_H_
 #define _BT_COLLECTOR_CACHER_H_
 

@@ -1,0 +1,11 @@
+{
+    "licenser.license": "Custom",
+    "licenser.author": "DriveX.Tech",
+    "licenser.customTermsAndConditions": "Copyright @YEAR@ @AUTHOR@\n\nBesides the following condition, all other permissions is the same as Apache2 license.\n\nRredistribution and use in source and binary forms must inform DriveXTech with email.",
+    "licenser.customHeader": "Copyright @YEAR@ @AUTHOR@. All rights reserved.\n\nLicensed under the License.",
+    "licenser.disableAutoHeaderInsertion": false,
+    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+    "files.associations": {
+        "bt_collector_cacher.h": "c"
+    }
+}

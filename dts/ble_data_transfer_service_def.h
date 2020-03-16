@@ -1,3 +1,7 @@
+// Copyright 2020 DriveX.Tech. All rights reserved.
+// 
+// Licensed under the License.
+
 #pragma once
 #ifndef _BLE_DATA_TRANSFER_SERVICE_DEF_H_
 #define _BLE_DATA_TRANSFER_SERVICE_DEF_H_

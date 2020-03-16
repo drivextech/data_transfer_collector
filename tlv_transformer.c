@@ -1,3 +1,9 @@
+/**
+ * Copyright 2020 DriveX.Tech. All rights reserved.
+ * 
+ * Licensed under the License.
+ */
+
 #include <string.h>
 #include <assert.h>
 #include "tlv_transformer.h"
@@ -61,8 +67,8 @@ int tlv_header_generate(const tag_t tag, const WORD len, BYTE* data)
 
     data[0] = tag;
 
-    data[1] = len;
-    data[2] = len >> 8;
+    data[1] = (BYTE)(len);
+    data[2] = (BYTE)(len >> 8);
 
     return 3;
 }

@@ -1,3 +1,7 @@
+// Copyright 2020 DriveX.Tech. All rights reserved.
+// 
+// Licensed under the License.
+
 
 #pragma once
 #ifndef _PACKET_BUF_H_

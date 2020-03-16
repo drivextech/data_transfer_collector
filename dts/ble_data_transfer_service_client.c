@@ -1,4 +1,10 @@
 /**
+ * Copyright 2020 DriveX.Tech. All rights reserved.
+ * 
+ * Licensed under the License.
+ */
+
+/**
  * Copyright (c) 2012 - 2019, Nordic Semiconductor ASA
  *
  * All rights reserved.
