@@ -265,6 +265,14 @@ static void ble_evt_handler(const ble_evt_t* p_ble_evt, void * p_context)
                 conn_handle = p_gap_evt->conn_handle;
 
                 SEND_LOG("(%s): conn_handle(0x%x) established, starting DB discovery.\r\n", __func__, conn_handle);
+                // SEND_LOG("(%s): conn_handle(0x%x), addr: %02x%02x%02x%02x%02x%02x\r\n", __func__,
+                //         conn_handle,
+                //         p_gap_evt->params.connected.peer_addr.addr[0],
+                //         p_gap_evt->params.connected.peer_addr.addr[1],
+                //         p_gap_evt->params.connected.peer_addr.addr[2],
+                //         p_gap_evt->params.connected.peer_addr.addr[3],
+                //         p_gap_evt->params.connected.peer_addr.addr[4],
+                //         p_gap_evt->params.connected.peer_addr.addr[5]);
 
                 APP_ERROR_CHECK_BOOL(conn_handle < MAX_PEER_NUM);
 
@@ -554,8 +562,14 @@ void ble_stack_init()
  */
 static void db_disc_handler(ble_db_discovery_evt_t* p_evt)
 {
-    SEND_LOG("(%s): call to ble_dts_client_on_db_disc_evt for conn_handle 0x%x!\r\n",
-                __func__, p_evt->conn_handle);
+//    SEND_LOG("(%s): call to ble_dts_client_on_db_disc_evt for conn_handle 0x%x, addr: %02x%02x%02x%02x%02x%02x!\r\n",
+//                __func__, p_evt->conn_handle,
+//                m_dts_clients[p_evt->conn_handle].peer_addr.addr1s[0],
+//                m_dts_clients[p_evt->conn_handle].peer_addr.addr1s[1],
+//                m_dts_clients[p_evt->conn_handle].peer_addr.addr1s[2],
+//                m_dts_clients[p_evt->conn_handle].peer_addr.addr1s[3],
+//                m_dts_clients[p_evt->conn_handle].peer_addr.addr1s[4],
+//                m_dts_clients[p_evt->conn_handle].peer_addr.addr1s[5]);
 
     ble_dts_client_on_db_disc_evt(&m_dts_clients[p_evt->conn_handle], p_evt);
 }

@@ -47,11 +47,11 @@ static bool init_pool_elem(bt_pool_elem_t* pool_elem)
 
 static bt_pool_elem_t *g_bt_pool = NULL;
 
-BUF_DEF(g_bt_pool_elem_buf, MAX_PEER_NUM, sizeof(bt_pool_elem_t));
+BUF_DEF(g_bt_pool_elem_buf, sizeof(bt_pool_elem_t), MAX_PEER_NUM);
 
-BUF_DEF(g_bt_data_queue_elem_buf, (MAX_PEER_NUM * 8), sizeof(bt_data_queue_elem_t));
+BUF_DEF(g_bt_data_queue_elem_buf, sizeof(bt_data_queue_elem_t), (MAX_PEER_NUM * 8));
 
-BUF_DEF(g_bt_data_queue_elem_data_buf, (MAX_PEER_NUM * 8), BLE_DTS_MAX_DATA_LEN);
+BUF_DEF(g_bt_data_queue_elem_data_buf, BLE_DTS_MAX_DATA_LEN, (MAX_PEER_NUM * 8));
 
 
 static UT_icd bt_addr_icd = { sizeof(bt_addr_t), NULL, NULL, NULL };
@@ -81,8 +81,8 @@ int get_cached_bt_packet_num()
 
 static int process_packet()
 {
-    static BYTE dt_buff[BLE_DTS_MAX_DATA_LEN];
-    static int dt_buff_len = 0;
+//    static BYTE dt_buff[BLE_DTS_MAX_DATA_LEN];
+//    static int dt_buff_len = 0;
 
     int num_packet_processed = 0;
 
@@ -135,7 +135,9 @@ static int process_packet()
             //HASH_FIND(hh, g_bt_pool, addr, sizeof(bt_addr_t), pool_elem);
             HASH_FIND(hh, g_bt_pool, addr->addr1s, sizeof(addr->addr1s), pool_elem);
             if(pool_elem != NULL) {
-                SEND_LOG("(%s): WARNNING: add duplicated peer, old counter: %d!\r\n", __func__, pool_elem->ref_counter);
+                SEND_LOG("(%s): WARNNING: add duplicated peer(0x%02x%02x%02x%02x%02x%02x), old counter: %d!\r\n", __func__,
+                    addr->addr1s[0], addr->addr1s[1], addr->addr1s[2], addr->addr1s[3], addr->addr1s[4], addr->addr1s[5],
+                    pool_elem->ref_counter);
                 pool_elem->ref_counter++;
                 continue;
             }

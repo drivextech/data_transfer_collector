@@ -166,7 +166,7 @@ void on_usb_data_received(const BYTE* data, WORD data_len)
     }
 }
 
-void on_usb_data_sent(const bt_addr_t* peer_addr)
+void on_usb_data_sent()
 {
     ret_code_t err_code;
 

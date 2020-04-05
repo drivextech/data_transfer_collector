@@ -51,6 +51,10 @@
 #include "ble_srv_common.h"
 #include "app_error.h"
 #include "nrf_log.h"
+#include <string.h>
+
+
+static ble_gap_addr_t g_conn_peer_addrs[NRF_SDH_BLE_CENTRAL_LINK_COUNT];
 
 
 void ble_dts_client_on_db_disc_evt(ble_dts_t* dts_inst, ble_db_discovery_evt_t* p_evt)
@@ -62,6 +66,7 @@ void ble_dts_client_on_db_disc_evt(ble_dts_t* dts_inst, ble_db_discovery_evt_t* 
         && (p_db_ser->srv_uuid.uuid == BLE_UUID_DTS_SERVICE)
         && (p_db_ser->srv_uuid.type == dts_inst->uuid_type)) {
         dts_inst->conn_handle = p_evt->conn_handle;
+        memcpy(dts_inst->peer_addr.addr1s, g_conn_peer_addrs[dts_inst->conn_handle].addr, sizeof(dts_inst->peer_addr.addr1s));
         for(int i=0; i < (int)p_db_ser->char_count; i++) {
             switch(p_chars[i].characteristic.uuid.uuid) {
                 case DTS_SENDER_CHAR_UUID:
@@ -150,7 +155,19 @@ void ble_dts_client_evt_handler(const ble_evt_t* p_ble_evt, void* p_context)
             do {
                 // NRF_LOG_INFO("(%s): Connected", __func__);
                 const ble_gap_evt_connected_t* p_connected_evt = &p_ble_evt->evt.gap_evt.params.connected;
-                memcpy(dts_inst->peer_addr.addr1s, p_connected_evt->peer_addr.addr, sizeof(dts_inst->peer_addr.addr1s));
+//                if(dts_inst->conn_handle == BLE_CONN_HANDLE_INVALID) {
+//                    memcpy(dts_inst->peer_addr.addr1s, p_connected_evt->peer_addr.addr, sizeof(dts_inst->peer_addr.addr1s));
+//                    SEND_LOG("(%s): Connected, conn_handle 0x%x <-> 0x%x, addr: %02x%02x%02x%02x%02x%02x", __func__,
+//                    dts_inst->conn_handle, p_ble_evt->evt.gap_evt.conn_handle,
+//                    p_connected_evt->peer_addr.addr[0],
+//                    p_connected_evt->peer_addr.addr[1],
+//                    p_connected_evt->peer_addr.addr[2],
+//                    p_connected_evt->peer_addr.addr[3],
+//                    p_connected_evt->peer_addr.addr[4],
+//                    p_connected_evt->peer_addr.addr[5]
+//                    );
+//                }
+                g_conn_peer_addrs[p_ble_evt->evt.gap_evt.conn_handle] = p_connected_evt->peer_addr;
             } while(0);
             break;
 
