@@ -188,7 +188,7 @@ void ble_data_scheduler_handler(void *p_event_data, uint16_t event_size)
         SEND_LOG("(%s): ble data received: %lu B, from: 0x%02X%02X, epoch: %u\r\n", __func__,
                     bt_data->buf_elem.elem_len,
                     bt_data->buf_elem.elem_data[5], bt_data->buf_elem.elem_data[6],
-                    bt_data->buf_elem.elem_data[36+5+2]); // TODO: delete
+                    bt_data->buf_elem.elem_data[40+5]); // TODO: delete
         // SEND_LOG("(%s)(bt_buf: %d, usb_buf: %d): ble data received: %lu B\r\n", __func__,
         //     get_cached_bt_packet_num(), get_cached_usb_packet_num(), bt_data->buf_elem.elem_len);
 

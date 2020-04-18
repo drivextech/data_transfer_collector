@@ -141,9 +141,8 @@ void ble_dts_client_evt_handler(const ble_evt_t* p_ble_evt, void* p_context)
 
         case BLE_GATTC_EVT_WRITE_CMD_TX_COMPLETE:
             do {
-                const ble_gattc_evt_hvx_t* p_ghvn_evt = &p_ble_evt->evt.gattc_evt.params.hvx;
-                if(dts_inst->conn_handle == p_ble_evt->evt.gattc_evt.conn_handle
-                    && dts_inst->receiver_char_handle == p_ghvn_evt->handle) {
+                const ble_gattc_evt_write_cmd_tx_complete_t* p_gwctc_evt = &p_ble_evt->evt.gattc_evt.params.write_cmd_tx_complete;
+                if(dts_inst->conn_handle == p_ble_evt->evt.gattc_evt.conn_handle) {
                     if(dts_inst->dts_cbers.data_sent_cber) {
                         dts_inst->dts_cbers.data_sent_cber(dts_inst);
                     }
